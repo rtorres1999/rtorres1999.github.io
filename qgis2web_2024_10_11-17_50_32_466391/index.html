@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Ejercicio sobre el complemento "qgis2web"</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/COMUNIDADESAUTONOMAS_2.js"></script>
+        <script src="data/PARQUESNACIONALES_3.js"></script>
+        <script src="data/RIOSPRINCIPALES_4.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+            highlightLayer.openPopup();
+        }
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[25.156057356169143,-26.737590805477396],[46.189966809988555,12.904158329419]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var title = new L.Control({'position':'topright'});
+        title.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        title.update = function () {
+            this._div.innerHTML = '<h2>Ejercicio sobre el complemento "qgis2web"</h2>';
+        };
+        title.addTo(map);
+        var abstract = new L.Control({'position':'bottomright'});
+        abstract.onAdd = function (map) {
+            this._div = L.DomUtil.create('div',
+            'leaflet-control abstract');
+            this._div.id = 'abstract'
+
+                abstract.show();
+                return this._div;
+            };
+            abstract.show = function () {
+                this._div.classList.remove("abstract");
+                this._div.classList.add("abstractUncollapsed");
+                this._div.innerHTML = 'Este visor se ha desarrollado como práctica usando el complemento "qgis2web"';
+        };
+        abstract.addTo(map);
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_DarkMatter_0');
+        map.getPane('pane_DarkMatter_0').style.zIndex = 400;
+        var layer_DarkMatter_0 = L.tileLayer('https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+            pane: 'pane_DarkMatter_0',
+            opacity: 1.0,
+            attribution: '<a href="https://cartodb.com/basemaps/">Map tiles by CartoDB, under CC BY 3.0. Data by OpenStreetMap, under ODbL.</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 20
+        });
+        layer_DarkMatter_0;
+        map.addLayer(layer_DarkMatter_0);
+        map.createPane('pane_OSMStandard_1');
+        map.getPane('pane_OSMStandard_1').style.zIndex = 401;
+        var layer_OSMStandard_1 = L.tileLayer('http://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OSMStandard_1',
+            opacity: 1.0,
+            attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OSMStandard_1;
+        map.addLayer(layer_OSMStandard_1);
+        function pop_COMUNIDADESAUTONOMAS_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ID'] !== null ? autolinker.link(feature.properties['ID'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['TIPO_0101'] !== null ? autolinker.link(feature.properties['TIPO_0101'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CODIGO_INE'] !== null ? autolinker.link(feature.properties['CODIGO_INE'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ETIQUETA'] !== null ? autolinker.link(feature.properties['ETIQUETA'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['COD_INE'] !== null ? autolinker.link(feature.properties['COD_INE'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['TOT_FOR'] !== null ? autolinker.link(feature.properties['TOT_FOR'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ARB'] !== null ? autolinker.link(feature.properties['ARB'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NO_ARB'] !== null ? autolinker.link(feature.properties['NO_ARB'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_COMUNIDADESAUTONOMAS_2_0() {
+            return {
+                pane: 'pane_COMUNIDADESAUTONOMAS_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(251,181,77,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_COMUNIDADESAUTONOMAS_2');
+        map.getPane('pane_COMUNIDADESAUTONOMAS_2').style.zIndex = 402;
+        map.getPane('pane_COMUNIDADESAUTONOMAS_2').style['mix-blend-mode'] = 'normal';
+        var layer_COMUNIDADESAUTONOMAS_2 = new L.geoJson(json_COMUNIDADESAUTONOMAS_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_COMUNIDADESAUTONOMAS_2',
+            layerName: 'layer_COMUNIDADESAUTONOMAS_2',
+            pane: 'pane_COMUNIDADESAUTONOMAS_2',
+            onEachFeature: pop_COMUNIDADESAUTONOMAS_2,
+            style: style_COMUNIDADESAUTONOMAS_2_0,
+        });
+        bounds_group.addLayer(layer_COMUNIDADESAUTONOMAS_2);
+        map.addLayer(layer_COMUNIDADESAUTONOMAS_2);
+        function pop_PARQUESNACIONALES_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ENP_ID'] !== null ? autolinker.link(feature.properties['ENP_ID'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NOMBRE'] !== null ? autolinker.link(feature.properties['NOMBRE'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CCAA'] !== null ? autolinker.link(feature.properties['CCAA'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['FIGURA'] !== null ? autolinker.link(feature.properties['FIGURA'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['HECTARES'] !== null ? autolinker.link(feature.properties['HECTARES'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['AREA'] !== null ? autolinker.link(feature.properties['AREA'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['PERIMETER'] !== null ? autolinker.link(feature.properties['PERIMETER'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_PARQUESNACIONALES_3_0() {
+            return {
+                pane: 'pane_PARQUESNACIONALES_3',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,113,141,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_PARQUESNACIONALES_3');
+        map.getPane('pane_PARQUESNACIONALES_3').style.zIndex = 403;
+        map.getPane('pane_PARQUESNACIONALES_3').style['mix-blend-mode'] = 'normal';
+        var layer_PARQUESNACIONALES_3 = new L.geoJson(json_PARQUESNACIONALES_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_PARQUESNACIONALES_3',
+            layerName: 'layer_PARQUESNACIONALES_3',
+            pane: 'pane_PARQUESNACIONALES_3',
+            onEachFeature: pop_PARQUESNACIONALES_3,
+            style: style_PARQUESNACIONALES_3_0,
+        });
+        bounds_group.addLayer(layer_PARQUESNACIONALES_3);
+        map.addLayer(layer_PARQUESNACIONALES_3);
+        function pop_RIOSPRINCIPALES_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['OBJECTID'] !== null ? autolinker.link(feature.properties['OBJECTID'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td class="visible-with-data" id="Texto"colspan="2"><strong>Texto</strong><br />' + (feature.properties['Texto'] !== null ? autolinker.link(feature.properties['Texto'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Longitud'] !== null ? autolinker.link(feature.properties['Longitud'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Categoria'] !== null ? autolinker.link(feature.properties['Categoria'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Imagen'] !== null ? autolinker.link(feature.properties['Imagen'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Shape_Leng'] !== null ? autolinker.link(feature.properties['Shape_Leng'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_RIOSPRINCIPALES_4_0() {
+            return {
+                pane: 'pane_RIOSPRINCIPALES_4',
+                opacity: 1,
+                color: 'rgba(72,123,182,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 1.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_RIOSPRINCIPALES_4');
+        map.getPane('pane_RIOSPRINCIPALES_4').style.zIndex = 404;
+        map.getPane('pane_RIOSPRINCIPALES_4').style['mix-blend-mode'] = 'normal';
+        var layer_RIOSPRINCIPALES_4 = new L.geoJson(json_RIOSPRINCIPALES_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_RIOSPRINCIPALES_4',
+            layerName: 'layer_RIOSPRINCIPALES_4',
+            pane: 'pane_RIOSPRINCIPALES_4',
+            onEachFeature: pop_RIOSPRINCIPALES_4,
+            style: style_RIOSPRINCIPALES_4_0,
+        });
+        bounds_group.addLayer(layer_RIOSPRINCIPALES_4);
+        map.addLayer(layer_RIOSPRINCIPALES_4);
+        var baseMaps = {};
+        var overlaysTree = [
+        {label: '<b>Editadas</b>', selectAllCheckbox: true, children: [
+            {label: '<img src="legend/RIOSPRINCIPALES_4.png" /> RIOS PRINCIPALES', layer: layer_RIOSPRINCIPALES_4},
+            {label: '<img src="legend/PARQUESNACIONALES_3.png" /> PARQUES NACIONALES', layer: layer_PARQUESNACIONALES_3},
+            {label: '<img src="legend/COMUNIDADESAUTONOMAS_2.png" /> COMUNIDADES AUTONOMAS', layer: layer_COMUNIDADESAUTONOMAS_2},]},
+            {label: "OSM Standard", layer: layer_OSMStandard_1},
+            {label: "Dark Matter", layer: layer_DarkMatter_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: false, 
+        });
+        lay.addTo(map);
+		document.addEventListener("DOMContentLoaded", function() {
+            // set new Layers List height which considers toggle icon
+            function newLayersListHeight() {
+                var layerScrollbarElement = document.querySelector('.leaflet-control-layers-scrollbar');
+                if (layerScrollbarElement) {
+                    var layersListElement = document.querySelector('.leaflet-control-layers-list');
+                    var originalHeight = layersListElement.style.height 
+                        || window.getComputedStyle(layersListElement).height;
+                    var newHeight = parseFloat(originalHeight) - 50;
+                    layersListElement.style.height = newHeight + 'px';
+                }
+            }
+            var isLayersListExpanded = true;
+            var controlLayersElement = document.querySelector('.leaflet-control-layers');
+            var toggleLayerControl = document.querySelector('.leaflet-control-layers-toggle');
+            // toggle Collapsed/Expanded and apply new Layers List height
+            toggleLayerControl.addEventListener('click', function() {
+                if (isLayersListExpanded) {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                } else {
+                    controlLayersElement.classList.add('leaflet-control-layers-expanded');
+                }
+                isLayersListExpanded = !isLayersListExpanded;
+                newLayersListHeight()
+            });	
+			// apply new Layers List height if toggle layerstree
+			if (controlLayersElement) {
+				controlLayersElement.addEventListener('click', function(event) {
+					var toggleLayerHeaderPointer = event.target.closest('.leaflet-layerstree-header-pointer span');
+					if (toggleLayerHeaderPointer) {
+						newLayersListHeight();
+					}
+				});
+			}
+            // Collapsed/Expanded at Start to apply new height
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            // Collapsed touch/small screen
+            var isSmallScreen = window.innerWidth < 650;
+            if (isSmallScreen) {
+                setTimeout(function() {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                    isLayersListExpanded = !isLayersListExpanded;
+                }, 500);
+            }  
+        });       
+        setBounds();
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"NOMBRE": "str","ETIQUETA": "str","Texto": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_NOMBRE = document.createElement('div');
+            div_NOMBRE.id = "div_NOMBRE";
+            div_NOMBRE.className= "filterselect";
+            document.getElementById("menu").appendChild(div_NOMBRE);
+            sel_NOMBRE = document.createElement('select');
+            sel_NOMBRE.multiple = true;
+            sel_NOMBRE.size = 10;
+            sel_NOMBRE.id = "sel_NOMBRE";
+            var NOMBRE_options_str = "<option value='' unselected></option>";
+            sel_NOMBRE.onchange = function(){filterFunc()};
+            NOMBRE_options_str  += '<option value="Aig�estortes i Estany de Sant Maurici">Aig�estortes i Estany de Sant Maurici</option>';
+            NOMBRE_options_str  += '<option value="Archipi�lago de Cabrera">Archipi�lago de Cabrera</option>';
+            NOMBRE_options_str  += '<option value="Caba�eros">Caba�eros</option>';
+            NOMBRE_options_str  += '<option value="Caldera de Taburiente">Caldera de Taburiente</option>';
+            NOMBRE_options_str  += '<option value="Do�ana">Do�ana</option>';
+            NOMBRE_options_str  += '<option value="Garajonay">Garajonay</option>';
+            NOMBRE_options_str  += '<option value="Mar�timo-terrestre de las Islas Atl�nticas de Galicia">Mar�timo-terrestre de las Islas Atl�nticas de Galicia</option>';
+            NOMBRE_options_str  += '<option value="Monfrag�e">Monfrag�e</option>';
+            NOMBRE_options_str  += '<option value="Ordesa y Monte Perdido">Ordesa y Monte Perdido</option>';
+            NOMBRE_options_str  += '<option value="Picos de Europa">Picos de Europa</option>';
+            NOMBRE_options_str  += '<option value="Sierra Nevada">Sierra Nevada</option>';
+            NOMBRE_options_str  += '<option value="Tablas de Daimiel">Tablas de Daimiel</option>';
+            NOMBRE_options_str  += '<option value="Teide">Teide</option>';
+            NOMBRE_options_str  += '<option value="Timanfaya">Timanfaya</option>';
+            sel_NOMBRE.innerHTML = NOMBRE_options_str;
+            div_NOMBRE.appendChild(sel_NOMBRE);
+            var lab_NOMBRE = document.createElement('div');
+            lab_NOMBRE.innerHTML = 'NOMBRE';
+            lab_NOMBRE.className = 'filterlabel';
+            div_NOMBRE.appendChild(lab_NOMBRE);
+            var reset_NOMBRE = document.createElement('div');
+            reset_NOMBRE.innerHTML = 'clear filter';
+            reset_NOMBRE.className = 'filterlabel';
+            reset_NOMBRE.onclick = function() {
+                var options = document.getElementById("sel_NOMBRE").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_NOMBRE.appendChild(reset_NOMBRE);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_ETIQUETA = document.createElement('div');
+            div_ETIQUETA.id = "div_ETIQUETA";
+            div_ETIQUETA.className= "filterselect";
+            document.getElementById("menu").appendChild(div_ETIQUETA);
+            sel_ETIQUETA = document.createElement('select');
+            sel_ETIQUETA.multiple = true;
+            sel_ETIQUETA.size = 10;
+            sel_ETIQUETA.id = "sel_ETIQUETA";
+            var ETIQUETA_options_str = "<option value='' unselected></option>";
+            sel_ETIQUETA.onchange = function(){filterFunc()};
+            ETIQUETA_options_str  += '<option value="CEUTA">CEUTA</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Andaluc�a">Comunidad Aut�noma de Andaluc�a</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Arag�n">Comunidad Aut�noma de Arag�n</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Canarias">Comunidad Aut�noma de Canarias</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Cantabria">Comunidad Aut�noma de Cantabria</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Castilla y Le�n">Comunidad Aut�noma de Castilla y Le�n</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Castilla-La Mancha">Comunidad Aut�noma de Castilla-La Mancha</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Catalu�a">Comunidad Aut�noma de Catalu�a</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Extremadura">Comunidad Aut�noma de Extremadura</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Galicia">Comunidad Aut�noma de Galicia</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Illes Balears">Comunidad Aut�noma de Illes Balears</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de La Rioja">Comunidad Aut�noma de La Rioja</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Aut�noma de Pa�s Vasco">Comunidad Aut�noma de Pa�s Vasco</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Foral de Navarra">Comunidad Foral de Navarra</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad Valenciana">Comunidad Valenciana</option>';
+            ETIQUETA_options_str  += '<option value="Comunidad de Madrid">Comunidad de Madrid</option>';
+            ETIQUETA_options_str  += '<option value="MELILLA">MELILLA</option>';
+            ETIQUETA_options_str  += '<option value="Principado de Asturias">Principado de Asturias</option>';
+            ETIQUETA_options_str  += '<option value="Regi�n de Murcia">Regi�n de Murcia</option>';
+            sel_ETIQUETA.innerHTML = ETIQUETA_options_str;
+            div_ETIQUETA.appendChild(sel_ETIQUETA);
+            var lab_ETIQUETA = document.createElement('div');
+            lab_ETIQUETA.innerHTML = 'ETIQUETA';
+            lab_ETIQUETA.className = 'filterlabel';
+            div_ETIQUETA.appendChild(lab_ETIQUETA);
+            var reset_ETIQUETA = document.createElement('div');
+            reset_ETIQUETA.innerHTML = 'clear filter';
+            reset_ETIQUETA.className = 'filterlabel';
+            reset_ETIQUETA.onclick = function() {
+                var options = document.getElementById("sel_ETIQUETA").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_ETIQUETA.appendChild(reset_ETIQUETA);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Texto = document.createElement('div');
+            div_Texto.id = "div_Texto";
+            div_Texto.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Texto);
+            sel_Texto = document.createElement('select');
+            sel_Texto.multiple = true;
+            sel_Texto.size = 8;
+            sel_Texto.id = "sel_Texto";
+            var Texto_options_str = "<option value='' unselected></option>";
+            sel_Texto.onchange = function(){filterFunc()};
+            Texto_options_str  += '<option value="R�o Duero">R�o Duero</option>';
+            Texto_options_str  += '<option value="R�o Ebro">R�o Ebro</option>';
+            Texto_options_str  += '<option value="R�o Guadalquivir">R�o Guadalquivir</option>';
+            Texto_options_str  += '<option value="R�o Guadiana">R�o Guadiana</option>';
+            Texto_options_str  += '<option value="R�o J�car">R�o J�car</option>';
+            Texto_options_str  += '<option value="R�o Mi�o">R�o Mi�o</option>';
+            Texto_options_str  += '<option value="R�o Segura">R�o Segura</option>';
+            Texto_options_str  += '<option value="R�o Tajo">R�o Tajo</option>';
+            sel_Texto.innerHTML = Texto_options_str;
+            div_Texto.appendChild(sel_Texto);
+            var lab_Texto = document.createElement('div');
+            lab_Texto.innerHTML = 'Texto';
+            lab_Texto.className = 'filterlabel';
+            div_Texto.appendChild(lab_Texto);
+            var reset_Texto = document.createElement('div');
+            reset_Texto.innerHTML = 'clear filter';
+            reset_Texto.className = 'filterlabel';
+            reset_Texto.onclick = function() {
+                var options = document.getElementById("sel_Texto").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Texto.appendChild(reset_Texto);
+        </script>
+    </body>
+</html>
